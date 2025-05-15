@@ -1,0 +1,137 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r}
+library(tidyverse)
+library(ggprism)
+```
+
+```{r}
+loggerhead_data <- read_csv("Loggerhead_oceanic_stage_duration.csv")
+
+loggerhead_df <- loggerhead_data %>%
+  mutate(Sex = ifelse(Sex == "unknown", NA, Sex)) %>% 
+  drop_na()
+
+loggerhead_df
+
+```
+
+
+```{r}
+loggerhead_df %>%
+    ggplot() + 
+  geom_boxplot(mapping = aes(x = Sex , y = Straight_Carapace_Length, fill = Sex)) +
+  theme_prism() +
+  labs(
+    title = "Sex Influences Carapace Length", 
+    subtitle = "On average, males have longer carapace length than females",
+    x = "Sex",
+    y = "Carapace Length (in)"
+  ) +
+  stat_summary(mapping = aes(x = Sex , y = Straight_Carapace_Length), 
+    fun = "mean"
+  )
+
+```
+
+
+### check normality of the variables to determine if the data is parametric or non-parametric
+
+```{r}
+loggerhead_df %>%
+  filter(Sex == "female") %>% 
+  ggplot() +
+  geom_qq( mapping = aes(sample = Straight_Carapace_Length)) +
+  geom_qq_line(mapping = aes(sample = Straight_Carapace_Length)) + 
+  theme_prism() + 
+  labs(
+    title = "Normality of Female Carapace Length Distributions"
+  )
+
+loggerhead_df %>%
+  filter(Sex == "male") %>% 
+  ggplot() +
+  geom_qq( mapping = aes(sample = Straight_Carapace_Length)) +
+  geom_qq_line(mapping = aes(sample = Straight_Carapace_Length)) +
+  theme_prism() + 
+  labs(
+    title = "Normality of Male Carapace Length Distributions"
+  )
+  
+```
+
+## does not look very normal so lets do a nonparametric test 
+
+```{r}
+F_length <- loggerhead_df  %>% filter(Sex == "female") %>% pull(Straight_Carapace_Length)
+M_length <- loggerhead_df %>% filter(Sex == "male") %>% pull(Straight_Carapace_Length)
+wilcox.test(F_length, M_length)
+```
+### we reject the null (p is less than 0.05)
+
+## INFERENTIAL STATS
+
+## hundred resamples 
+
+```{r}
+hundred_resamples <- c()
+
+for(i in 1:100){
+  oneresample <- loggerhead_df %>%
+    sample_n(size=837, replace = TRUE)
+  
+ sc_length <- oneresample %>% 
+  group_by(Sex) %>%
+  summarize(mean_length = mean(Straight_Carapace_Length))
+  
+test_stat <- sc_length %>% 
+  filter(Sex == "male") %>% 
+  pull(mean_length) -
+  sc_length %>%
+  filter(Sex == "female") %>%
+  pull(mean_length)
+
+hundred_resamples <- hundred_resamples %>% rbind(test_stat)
+}
+
+```
+
+## plotting these resamples
+```{r}
+hundred_resamples <- enframe(hundred_resamples)
+hundred_resamples 
+
+hundred_resamples %>% 
+  ggplot() +
+  geom_histogram(mapping = aes( x = value))
+```
+## Find standard error 
+```{r}
+SE <- hundred_resamples %>% pull(value) %>% sd()
+SE
+```
+## point estimate
+```{r}
+summary_turtles <- loggerhead_df %>% 
+  group_by(Sex) %>%
+  summarise(mean_length = mean(Straight_Carapace_Length))
+PE <- summary_turtles %>% 
+  filter(Sex == "male") %>% pull(mean_length) -
+  summary_turtles %>%
+  filter(Sex == "female") %>% pull(mean_length)
+
+PE
+```
+
+##Confidence interval
+
+```{r}
+lower_bound_CI <- PE - (1.96 * SE) 
+upper_bound_CI <- PE + (1.96 * SE)
+
+lower_bound_CI
+upper_bound_CI
+```
