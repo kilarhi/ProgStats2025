@@ -132,6 +132,6 @@ PE
 lower_bound_CI <- PE - (1.96 * SE) 
 upper_bound_CI <- PE + (1.96 * SE)
 
-lower_bound_CI
-upper_bound_CI
+#lower_bound_CI
+#upper_bound_CI
 ```
