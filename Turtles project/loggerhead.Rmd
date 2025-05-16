@@ -6,6 +6,7 @@ output: html_notebook
 ```{r}
 library(tidyverse)
 library(ggprism)
+library(ggplot2)
 ```
 
 ```{r}
@@ -99,15 +100,6 @@ hundred_resamples <- hundred_resamples %>% rbind(test_stat)
 
 ```
 
-## plotting these resamples
-```{r}
-hundred_resamples <- enframe(hundred_resamples)
-hundred_resamples 
-
-hundred_resamples %>% 
-  ggplot() +
-  geom_histogram(mapping = aes( x = value))
-```
 ## Find standard error 
 ```{r}
 SE <- hundred_resamples %>% pull(value) %>% sd()
@@ -135,3 +127,30 @@ upper_bound_CI <- PE + (1.96 * SE)
 #lower_bound_CI
 #upper_bound_CI
 ```
+
+
+## graphing bootstrapping, CI, PE
+
+```{r}
+ggplot(hundred_resamples, aes(x = value)) +
+  geom_histogram(binwidth = 0.1, fill = "lightblue", color = "white") +
+  # shaded CI region
+  annotate("rect",
+           xmin = lower_bound_CI, xmax = upper_bound_CI,
+           ymin = 0,            ymax = Inf,
+           alpha = 0.2,         fill = "blue") +
+  # dashed lines at the CI bounds
+  geom_vline(xintercept = lower_bound_CI, linetype = "dashed", color = "blue", size = 1) +
+  geom_vline(xintercept = upper_bound_CI, linetype = "dashed", color = "blue", size = 1) +
+  # solid line at the point estimate
+  geom_vline(xintercept = PE, color = "red", size = 1.2) +
+  theme_prism() +
+  labs(
+    title =  "Bootstrap Distribution of Mean Carapace Length Difference",
+    subtitle = sprintf("95%% CI: [%.2f, %.2f]    Point Estimate: %.2f", 
+                       lower_bound_CI, upper_bound_CI, PE),
+    x = "Difference in Mean SCL (male – female)",
+    y = "Frequency"
+  )
+```
+
