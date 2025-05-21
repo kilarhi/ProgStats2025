@@ -82,7 +82,7 @@ hundred_resamples <- c()
 
 for(i in 1:100){
   oneresample <- loggerhead_df %>%
-    sample_n(size=837, replace = TRUE)
+    sample_n(size=333, replace = TRUE)
   
  sc_length <- oneresample %>% 
   group_by(Sex) %>%
@@ -99,6 +99,12 @@ hundred_resamples <- hundred_resamples %>% rbind(test_stat)
 }
 
 ```
+
+
+```{r}
+hundred_resamples <- enframe(hundred_resamples)
+```
+
 
 ## Find standard error 
 ```{r}
@@ -153,5 +159,3 @@ ggplot(hundred_resamples, aes(x = value)) +
     y = "Frequency"
   )
 ```
-
-##Hi Cristy! This is a test
