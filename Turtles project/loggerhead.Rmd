@@ -200,7 +200,7 @@ ggplot(hundred_resamples, aes(x = value)) +
   geom_vline(xintercept = lower_bound_CI, linetype = "dashed", color = "blue", linewidth = 1) +
   geom_vline(xintercept = upper_bound_CI, linetype = "dashed", color = "blue", linewidth = 1) +
   # solid line at the point estimate
-  geom_vline(xintercept = PE, color = "red", size = 1.2) +
+  geom_vline(xintercept = PE, color = "red", linewidth = 1.2) +
   theme_prism() +
   labs(
     title =  "Bootstrap Distribution of Mean Carapace Length Difference",
@@ -210,7 +210,7 @@ ggplot(hundred_resamples, aes(x = value)) +
     y = "Frequency"
   ) +
   theme(
-    plot.margin = unit(c(1, 1, 4, 1), "lines"),
+    plot.margin = unit(c(1, 4, 4, 1), "lines"),
   )
 ```
 
