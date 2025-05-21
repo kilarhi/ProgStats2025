@@ -80,33 +80,30 @@ wilcox.test(F_length, M_length)
 #### For every resample, we take the mean carapace length of females and subtract it from the mean carapace length of males.
 
 ```{r}
+#Creates an empty vector to store our bootstrapping
 hundred_resamples <- c()
+
 
 for(i in 1:100){
   oneresample <- loggerhead_df %>%
-    sample_n(size=333, replace = TRUE)
+    sample_n(size=333, replace = TRUE) #For every resample, sample 333 rows randomly to mimic random sampling variation
   
  sc_length <- oneresample %>% 
   group_by(Sex) %>%
-  summarize(mean_length = mean(Straight_Carapace_Length))
+  summarize(mean_length = mean(Straight_Carapace_Length)) #Group by sex and take the average of carapace length per resample
   
 test_stat <- sc_length %>% 
   filter(Sex == "male") %>% 
   pull(mean_length) -
   sc_length %>%
   filter(Sex == "female") %>%
-  pull(mean_length)
+  pull(mean_length) #Subtract average female carapace length from average male carapace length
 
-hundred_resamples <- hundred_resamples %>% rbind(test_stat)
+hundred_resamples <- hundred_resamples %>% rbind(test_stat) #Store the test statistic from each resample into our vector 
 }
 
+hundred_resamples <- enframe(hundred_resamples) #Convert the vector into a data frame 
 ```
-
-## convert the vector into a data frame 
-```{r}
-hundred_resamples <- enframe(hundred_resamples)
-```
-
 
 ## Find standard error 
 ```{r}
@@ -137,7 +134,7 @@ upper_bound_CI
 ```
 
 
-## graphing bootstrapping, CI, PE
+## Graphing bootstrapping, CI, PE
 
 ```{r}
 ggplot(hundred_resamples, aes(x = value)) +
