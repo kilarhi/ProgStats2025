@@ -1,45 +1,87 @@
 ---
 title: "Tracking Loggerhead Turtle Carapace Length"
-output: html_notebook
+subtitle: "UCSF PROPEL Programming and Statistics Spring 2025 Final Project"
+author: "Belle Lomeli, Rhiannon Red Bird, Cristy Mendoza, Adriana Bibo"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
 ---
 
-```{r}
+We are going to analyze a data set from the Southeast Fisheries Science Center, which analyzed skeletal growth marks in humerus bones of 222 juvenile loggerhead sea turtles (Caretta caretta) stranded dead along the Atlantic US coast. We'll parse through the raw data, then perform a descriptive and inferential statistical analysis on it.
+
+## Section 1: Loading the Data
+
+```{r, message = FALSE}
+#First, we'll load in our libraries
 library(tidyverse)
 library(ggprism)
 library(ggplot2)
 ```
 
 ```{r}
-loggerhead_data <- read_csv("Loggerhead_oceanic_stage_duration.csv")
+#Next, we'll check out the raw data and remove any unknown variables particularly from the sex column
+
+loggerhead_data <- read_csv("Loggerhead_oceanic_stage_duration.csv", show_col_types = FALSE)
 
 loggerhead_df <- loggerhead_data %>%
   mutate(Sex = ifelse(Sex == "unknown", NA, Sex)) %>% 
   drop_na()
 
-loggerhead_df
-
 ```
 
+We can preview our cleaned up data set below.
 
 ```{r}
+head(loggerhead_df)
+```
+
+## Section 2: Descriptive Statistics of Loggerhead Turtles
+
+We'll start by plotting the data in a boxplot comparing carapace length between male and female loggerhead turtles. Descriptive statistics only describe our data set, so we should not draw any correlative conclusions based on this initial test.
+
+```{r, warning=FALSE}
 loggerhead_df %>%
     ggplot() + 
   geom_boxplot(mapping = aes(x = Sex , y = Straight_Carapace_Length, fill = Sex)) +
   theme_prism() +
   labs(
     title = "Sex Influences Carapace Length", 
-    subtitle = "On average, males have longer carapace length than females",
+    subtitle = "On average, males have longer carapace length than females", 
+    caption = "Data was obtained from the Southeast Fisheries Science Center between 1984 and 2009",
     x = "Sex",
     y = "Carapace Length (in)"
   ) +
   stat_summary(mapping = aes(x = Sex , y = Straight_Carapace_Length), 
     fun = "mean"
+  ) +
+ theme(
+    plot.caption = element_text(hjust = 0, size = 9),
+    plot.caption.position = "plot"                    
   )
-
 ```
 
+We can create a table of the descriptive statistics plotted on our graph as well.
 
-### check normality of the variables to determine if the data is parametric or non-parametric
+```{r}
+descriptive_stats <- loggerhead_df %>%
+  group_by(Sex) %>%
+  summarise(
+    mean_length = mean(Straight_Carapace_Length),
+    median_length = median(Straight_Carapace_Length), 
+    min_length = min(Straight_Carapace_Length),       
+    max_length = max(Straight_Carapace_Length),     
+    sd_length = sd(Straight_Carapace_Length)  
+  )
+
+print(descriptive_stats)
+```
+
+Based on this analysis, we can conclude the mean carapace length for male turtles is longer than females by 7 inches, with standard deviations being fairly similar between the sexes in this data set. 
+
+### Checking Normality of The Data
+
+Before running any significance tests, we should check the normality of our variables to determine if the data is parametric or non-parametric. This can help us apply the proper testing method to our data.
 
 ```{r}
 loggerhead_df %>%
@@ -64,20 +106,29 @@ loggerhead_df %>%
   
 ```
 
-## does not look very normal so lets do a nonparametric test 
+Since our data skews from the linear slope at the far end points, we can conclude it is not normal and should perform a nonparametric test, such as the Wilcox test, to determine if there is a significant difference in mean carapace length between the sexes of Loggerhead turtles. 
+
+### Wilcox Test
+
+Our null hypothesis would be that there is no significant carapace length difference between sexes in our data, and we can us a p value of 0.05 as our cut off point for significance. 
 
 ```{r}
 F_length <- loggerhead_df  %>% filter(Sex == "female") %>% pull(Straight_Carapace_Length)
 M_length <- loggerhead_df %>% filter(Sex == "male") %>% pull(Straight_Carapace_Length)
 wilcox.test(F_length, M_length)
 ```
-### we reject the null (p is less than 0.05)
 
-## INFERENTIAL STATS
+Based on this analysis, we can reject the null hypothesis and conclude that there is a significant difference in carapace length between male and female Loggerhead turtles in this data set.
 
-## Resampling
+## Sections 3: Inferential Statistics of Loggerhead Turtles
 
-#### For every resample, we take the mean carapace length of females and subtract it from the mean carapace length of males.
+Inferential statistics can be a useful method of drawing conclusions for a whole population based on a select sample, such as drawing conclusions about the Loggerhead species based on the turtles surveyed in this data set. We can estimate population parameters, such as whether carapace length is different between sexes in the total Loggerhead population, and determine our confidence of this conclusion.
+
+### Bootstrapping to Determine Confidence Interval and Standard Error of the Data
+
+#### Resampling
+
+For every resample, we take the mean carapace length of females and subtract it from the mean carapace length of males.
 
 ```{r}
 #Creates an empty vector to store our bootstrapping
@@ -105,13 +156,14 @@ hundred_resamples <- hundred_resamples %>% rbind(test_stat) #Store the test stat
 hundred_resamples <- enframe(hundred_resamples) #Convert the vector into a data frame 
 ```
 
-## Find standard error 
+Next, we'll find the standard error.
+
 ```{r}
 SE <- hundred_resamples %>% pull(value) %>% sd()
 SE
 ```
 
-## This point estimate is the average of lengths between sexes, estimating the true difference in length of the population
+This point estimate is the average of lengths between sexes, estimating the true difference in length of the population.
 ```{r}
 summary_turtles <- loggerhead_df %>% 
   group_by(Sex) %>%
@@ -124,7 +176,7 @@ PE <- summary_turtles %>%
 PE
 ```
 
-## The confidence interval is the range of plausible differences in length between male and female loggerheads 
+The confidence interval is the range of plausible differences in length between male and female loggerheads. 
 ```{r}
 lower_bound_CI <- PE - (1.96 * SE) 
 upper_bound_CI <- PE + (1.96 * SE)
@@ -134,7 +186,7 @@ upper_bound_CI
 ```
 
 
-## Graphing bootstrapping, CI, PE
+Finally, we'll plot our bootstrapped resamples, confidence interval, and point estimate.
 
 ```{r}
 ggplot(hundred_resamples, aes(x = value)) +
@@ -145,10 +197,10 @@ ggplot(hundred_resamples, aes(x = value)) +
            ymin = 0,            ymax = Inf,
            alpha = 0.2,         fill = "blue") +
   # dashed lines at the CI bounds
-  geom_vline(xintercept = lower_bound_CI, linetype = "dashed", color = "blue", size = 1) +
-  geom_vline(xintercept = upper_bound_CI, linetype = "dashed", color = "blue", size = 1) +
+  geom_vline(xintercept = lower_bound_CI, linetype = "dashed", color = "blue", linewidth = 1) +
+  geom_vline(xintercept = upper_bound_CI, linetype = "dashed", color = "blue", linewidth = 1) +
   # solid line at the point estimate
-  geom_vline(xintercept = PE, color = "red", size = 1.2) +
+  geom_vline(xintercept = PE, color = "red", linewidth = 1.2) +
   theme_prism() +
   labs(
     title =  "Bootstrap Distribution of Mean Carapace Length Difference",
@@ -156,6 +208,14 @@ ggplot(hundred_resamples, aes(x = value)) +
                        lower_bound_CI, upper_bound_CI, PE),
     x = "Difference in Mean Carapace Length (in) (male – female)",
     y = "Frequency"
+  ) +
+  theme(
+    plot.margin = unit(c(1, 4, 4, 1), "lines"),
   )
 ```
-## from these data, we estimate males are, on average 6.3 (the point estimate) inches larger than females. If we were to repeat this experiment, we'd expect males to be between 2.49 and 10.11 inches (the confidence interval) larger than females. 
+
+Based on the resamples of these data, we estimate males are, on average 6.3 (the point estimate) inches larger than females. If we were to repeat this experiment, we'd expect males to be between 2.84 and 9.76 inches (the confidence interval) larger than females. 
+
+## Bibliography
+
+Southeast Fisheries Science Center, 2025: Loggerhead oceanic stage duration in North Atlantic Ocean from 1984 to 2009 (NCEI Accession 0157929), https://www.fisheries.noaa.gov/inport/item/29718.
